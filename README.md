@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Resume.AI - Multi-Agent CV Ranking System
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -422,3 +423,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ by the Resume.AI Team**
 
+=======
+# FastMVC
+MVC Pattern FastAPI Design
+>>>>>>> fastmvc/main

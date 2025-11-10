@@ -101,12 +101,6 @@ class ParserAgent(BaseAgent):
             if file_type == "pdf" or file_path.endswith(".pdf"):
                 self.logger.debug("Using PDF extraction")
                 return self._extract_from_pdf(file_path)
-            elif file_type == "docx" or file_path.endswith(".docx"):
-                self.logger.debug("Using DOCX extraction")
-                return self._extract_from_docx(file_path)
-            elif file_type == "txt" or file_path.endswith(".txt"):
-                self.logger.debug("Using TXT extraction")
-                return self._extract_from_txt(file_path)
             else:
                 self.logger.error(f"Unsupported file type: {file_type}")
                 raise ValueError(f"Unsupported file type: {file_type}")
@@ -135,37 +129,7 @@ class ParserAgent(BaseAgent):
                     self.logger.debug(f"Extracted {len(page_text)} chars from page {page_num}")
         self.logger.info(f"Completed PDF extraction: {len(text)} total characters")
         return clean_text(text)
-    
-    def _extract_from_docx(self, file_path: str) -> str:
-        """Extract text from DOCX file.
-        
-        Args:
-            file_path: Path to DOCX file
-            
-        Returns:
-            Extracted text
-        """
-        self.logger.debug(f"Opening DOCX file: {file_path}")
-        doc = Document(file_path)
-        text = "\n".join([para.text for para in doc.paragraphs])
-        self.logger.info(f"Extracted {len(text)} characters from DOCX")
-        return clean_text(text)
-    
-    def _extract_from_txt(self, file_path: str) -> str:
-        """Extract text from TXT file.
-        
-        Args:
-            file_path: Path to TXT file
-            
-        Returns:
-            Extracted text
-        """
-        self.logger.debug(f"Opening TXT file: {file_path}")
-        with open(file_path, 'r', encoding='utf-8') as f:
-            text = f.read()
-        self.logger.info(f"Extracted {len(text)} characters from TXT")
-        return clean_text(text)
-    
+
     async def _parse_with_llm(self, text: str) -> Dict[str, Any]:
         """Parse CV text using LLM.
         
@@ -299,8 +263,8 @@ Return ONLY valid JSON, no additional text."""
             "cv_id": str(uuid.uuid4()),
             "candidate": {
                 "name": "",
-                "email": self._extract_email(text) or "",
-                "phone": self._extract_phone(text) or "",
+                "email": "",
+                "phone": "",
                 "location": "",
                 "linkedin": ""
             },

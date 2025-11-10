@@ -129,7 +129,7 @@ class FetchRankingJobResultController(IV1RankingJobController):
                 user_id=self.user_id,
                 redis_session=redis_session
             )
-            response_dto = await service.run(
+            response_dto = service.run(
                 request_dto=FetchRankingJobResultRequestDTO(
                     job_id=job_id
                 )

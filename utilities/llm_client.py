@@ -67,15 +67,13 @@ class LLMClientUtility(IUtility):
                 self.logger.debug(f"Combined full prompt length: {len(full_prompt)} chars")
             
             # Use Google client to generate text
-            response = await self.google_client.generate(
-                prompt=full_prompt,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            # Use the conversational LLM model directly
+            response = self._conversational_llm_model.invoke(full_prompt)
             
-            self.logger.info(f"Generated text successfully. Response length: {len(response)} chars")
-            return response
+            # Extract content from response
+            response_text = response.content if hasattr(response, 'content') else str(response)
+            self.logger.info(f"Generated text successfully. Response length: {len(response_text)} chars")
+            return response_text
         
         except Exception as e:
             self.logger.error(f"Error generating text with Gemini: {e}", exc_info=True)
@@ -97,10 +95,12 @@ class LLMClientUtility(IUtility):
         self.logger.debug(f"Average text length: {sum(len(t) for t in texts) / len(texts):.0f} chars")
         
         try:
-            embeddings = await self.google_client.generate_embeddings(
-                texts=texts,
-                model=self.embedding_llm_model
-            )
+            # Use the embedding LLM model directly
+            embeddings = []
+            for text in texts:
+                embedding = self._embedding_llm_model.embed_query(text)
+                embeddings.append(embedding)
+            
             self.logger.info(f"Successfully generated {len(embeddings)} embeddings")
             return embeddings
         

@@ -1,4 +1,5 @@
 import os
+import json
 
 from datetime import datetime
 from fastapi import BackgroundTasks
@@ -62,13 +63,13 @@ class CreateRankingJobService(IV1RankingJobService):
         try:
             self.logger.info(f"Processing ranking job {job_id}")
 
-            self.redis_session.set(job_id, {
+            self.redis_session.set(job_id, json.dumps({
                 "status": WorkflowStatusConstant.PROCESSING,
                 "created_at": datetime.now().isoformat(),
                 "cv_count": len(cv_files),
                 "job_title": job_title,
                 "company": company
-            })
+            }))
 
             result = await self.orchestrator.process({
                 "job_description": job_description,
@@ -78,26 +79,26 @@ class CreateRankingJobService(IV1RankingJobService):
             })
             
             if result.get("success"):
-                self.redis_session.set(job_id, {
+                self.redis_session.set(job_id, json.dumps({
                     "status": WorkflowStatusConstant.COMPLETED,
                     "results": result,
                     "completed_at": datetime.now().isoformat(),
                     "job_title": job_title,
                     "company": company,
                     "cv_count": len(cv_files)
-                })
+                }))
                 self.logger.info(f"Job {job_id} completed successfully")
 
             else:
 
-                self.redis_session.set(job_id, {
+                self.redis_session.set(job_id, json.dumps({
                     "status": WorkflowStatusConstant.FAILED,
                     "error": result.get("error", "Unknown error"),
                     "completed_at": datetime.now().isoformat(),
                     "job_title": job_title,
                     "company": company,
                     "cv_count": len(cv_files)
-                })
+                }))
                 self.logger.error(f"Job {job_id} failed: {result.get('error')}")
 
             for cv_file in cv_files:
@@ -108,39 +109,39 @@ class CreateRankingJobService(IV1RankingJobService):
         
         except Exception as e:
             self.logger.error(f"Error processing job {job_id}: {e}", exc_info=True)
-            self.redis_session.set(job_id, {
+            self.redis_session.set(job_id, json.dumps({
                 "status": WorkflowStatusConstant.FAILED,
                 "error": str(e),
                 "completed_at": datetime.now().isoformat(),
                 "job_title": job_title,
                 "company": company,
                 "cv_count": len(cv_files)
-            })
+            }))
 
-    def run(self, request_dto: BaseModel) -> BaseResponseDTO:
+    def run(self, job_id: str, request_dto: BaseModel, background_tasks: BackgroundTasks = None) -> BaseResponseDTO:
 
         try:
             
             job_data: Dict[str, str] = {
-                "job_id": request_dto.job_id,
-                "status": WorkflowStatusConstant.PROCESSING,
+                "job_id": job_id,
+                "status": WorkflowStatusConstant.INITIALIZED,
                 "created_at": datetime.now().isoformat(),
-                "cv_count": len(request_dto.saved_files),
+                "cv_count": len(request_dto.cv_files),
                 "job_title": request_dto.job_title,
                 "company": request_dto.company
             }
-            self.redis_session.set(request_dto.job_id, job_data)
+            self.redis_session.set(job_id, json.dumps(job_data))
 
-            background_tasks: BackgroundTasks = request_dto.background_tasks
-            background_tasks.add_task(
-                self.process_ranking_job,
-                request_dto.job_id,
-                request_dto.job_description,
-                request_dto.job_title,
-                request_dto.company,
-                request_dto.saved_files
-            )
-            self.logger.info(f"Ranking job {request_dto.job_id} created successfully")
+            if background_tasks:
+                background_tasks.add_task(
+                    self.process_ranking_job,
+                    job_id,
+                    request_dto.job_description,
+                    request_dto.job_title,
+                    request_dto.company,
+                    request_dto.cv_files
+                )
+            self.logger.info(f"Ranking job {job_id} created successfully")
 
             return BaseResponseDTO(
                 transactionUrn=self.urn,

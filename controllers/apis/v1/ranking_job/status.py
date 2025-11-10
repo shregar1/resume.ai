@@ -1,12 +1,14 @@
 from fastapi import Request, Path, Depends
 from fastapi.responses import JSONResponse
 from http import HTTPStatus
+from redis import Redis
 
 from constants.api_lk import APILK
 from constants.api_status import APIStatus
 
 from controllers.apis.v1.ranking_job.abstraction import IV1RankingJobController
 
+from dependencies.cache import CacheDependency
 from dependencies.utilities.dictionary import DictionaryUtilityDependency
 
 from dtos.requests.ranking_job.status import FetchRankingJobStatusRequestDTO
@@ -90,6 +92,9 @@ class FetchRankingJobStatusController(IV1RankingJobController):
         job_id: str = Path(...),
         dictionary_utility: DictionaryUtility = Depends(
             DictionaryUtilityDependency.derive
+        ),
+        redis_session: Redis = Depends(
+            CacheDependency.derive
         )
     ) -> JSONResponse:
         try:
@@ -117,12 +122,12 @@ class FetchRankingJobStatusController(IV1RankingJobController):
                     responseKey="error_job_id_required"
                 )
             
-            status_ranking_job_service = StatusRankingJobService(
+            status_ranking_job_service = FetchRankingJobStatusService(
                 urn=self.urn,
                 user_urn=self.user_urn,
                 api_name=self.api_name,
                 user_id=self.user_id,
-                redis_session=self.redis_session
+                redis_session=redis_session
             )
             response_dto = await status_ranking_job_service.run(
                 request_dto=FetchRankingJobStatusRequestDTO(

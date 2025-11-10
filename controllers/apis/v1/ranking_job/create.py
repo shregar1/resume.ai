@@ -185,13 +185,14 @@ class CreateRankingJobController(IV1RankingJobController):
             )
 
             response_dto = service.run(
+                job_id=job_id,
                 request_dto=CreateRankingJobRequestDTO(
-                    job_id=job_id,
                     job_description=job_description,
                     job_title=job_title,
                     company=company,
-                    cv_files=saved_files
-                )
+                    cv_files=[file_info["file_path"] for file_info in saved_files]
+                ),
+                background_tasks=background_tasks
             )
 
             self.logger.debug("Preparing response metadata")

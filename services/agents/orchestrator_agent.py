@@ -73,18 +73,24 @@ class OrchestratorAgent(BaseAgent):
             Dictionary containing complete ranking results
         """
         job_id = str(uuid.uuid4())
-        self.logger.info(f"=== Starting new ranking job {job_id} ===")
+        self.logger.info(f"\n{'='*80}")
+        self.logger.info(f"🚀 STARTING RANKING JOB: {job_id}")
+        self.logger.info(f"{'='*80}\n")
         
         try:
-            self.logger.info(f"Job {job_id}: Received {len(data.get('cv_files', []))} CV files to process")
+            num_cvs = len(data.get('cv_files', []))
+            self.logger.info(f"📊 Total CVs to process: {num_cvs}\n")
             
             # Phase 1: Analyze Job Description
-            self.logger.info(f"Job {job_id}: Phase 1 - Analyzing job description")
+            self.logger.info(f"{'='*80}")
+            self.logger.info("📋 PHASE 1: Analyzing Job Description with LLM")
+            self.logger.info(f"{'='*80}")
             jd_result = await self.jd_analyzer_agent.process({
                 "job_description": data.get("job_description"),
                 "job_title": data.get("job_title", ""),
                 "company": data.get("company", "")
             })
+            self.logger.info("✅ Job description analyzed successfully\n")
             
             if not jd_result.get("success"):
                 self.logger.error(f"Job {job_id}: Failed to analyze job description")
@@ -96,7 +102,9 @@ class OrchestratorAgent(BaseAgent):
             
             # Phase 2: Parse CVs in parallel
             cv_files = data.get("cv_files", [])
-            self.logger.info(f"Job {job_id}: Phase 2 - Parsing {len(cv_files)} CVs in parallel")
+            self.logger.info(f"{'='*80}")
+            self.logger.info(f"📄 PHASE 2: Parsing {len(cv_files)} CVs with LLM (Parallel Processing)")
+            self.logger.info(f"{'='*80}")
             
             parse_tasks = [
                 self._parse_cv(cv_file, job_id, i)
@@ -113,11 +121,13 @@ class OrchestratorAgent(BaseAgent):
             
             failed_count = len(parsed_cvs) - len(successful_cvs)
             if failed_count > 0:
-                self.logger.warning(f"Job {job_id}: {failed_count} CVs failed to parse")
-            self.logger.info(f"Job {job_id}: Successfully parsed {len(successful_cvs)}/{len(cv_files)} CVs")
+                self.logger.warning(f"⚠️  {failed_count} CVs failed to parse")
+            self.logger.info(f"✅ Successfully parsed {len(successful_cvs)}/{len(cv_files)} CVs\n")
             
             # Phase 3: Match and Score each CV
-            self.logger.info(f"Job {job_id}: Phase 3 - Matching and scoring {len(successful_cvs)} CVs")
+            self.logger.info(f"{'='*80}")
+            self.logger.info(f"🔍 PHASE 3: Matching and Scoring {len(successful_cvs)} Candidates")
+            self.logger.info(f"{'='*80}")
             
             score_tasks = [
                 self._match_and_score_cv(cv["cv_data"], jd_data, jd_embeddings, job_id)
@@ -132,10 +142,12 @@ class OrchestratorAgent(BaseAgent):
                 if not isinstance(score, Exception) and score is not None
             ]
             
-            self.logger.info(f"Job {job_id}: Scored {len(successful_scores)} candidates")
+            self.logger.info(f"✅ Completed matching and scoring for {len(successful_scores)} candidates\n")
             
             # Phase 4: Rank candidates
-            self.logger.info(f"Job {job_id}: Ranking candidates")
+            self.logger.info(f"{'='*80}")
+            self.logger.info(f"🏆 PHASE 4: Ranking {len(successful_scores)} Candidates")
+            self.logger.info(f"{'='*80}")
             ranking_result = await self.ranking_agent.process({
                 "candidate_scores": successful_scores,
                 "jd_data": jd_data
@@ -143,6 +155,14 @@ class OrchestratorAgent(BaseAgent):
             
             if not ranking_result.get("success"):
                 raise Exception("Failed to rank candidates")
+            
+            self.logger.info("✅ Ranking completed successfully\n")
+            self.logger.info(f"{'='*80}")
+            self.logger.info(f"🎉 JOB COMPLETED: {job_id}")
+            self.logger.info(f"{'='*80}")
+            self.logger.info(f"📊 Total Candidates Ranked: {ranking_result.get('total_candidates', 0)}")
+            self.logger.info(f"📈 Tier Distribution: {ranking_result.get('tiers', {})}")
+            self.logger.info(f"{'='*80}\n")
             
             # Compile final results
             return {
@@ -178,13 +198,13 @@ class OrchestratorAgent(BaseAgent):
             Parsed CV data
         """
         try:
-            self.logger.info(f"Job {job_id}: Parsing CV {index + 1}")
+            self.logger.info(f"  📄 Parsing CV {index + 1} - {cv_file.get('file_path', 'unknown')}")
             result = await self.parser_agent.process(cv_file)
             
             if result.get("success"):
-                self.logger.info(f"Job {job_id}: Successfully parsed CV {index + 1}")
+                self.logger.info(f"  ✅ CV {index + 1} parsed successfully")
             else:
-                self.logger.warning(f"Job {job_id}: Failed to parse CV {index + 1}")
+                self.logger.warning(f"  ❌ CV {index + 1} failed to parse")
             
             return result
         

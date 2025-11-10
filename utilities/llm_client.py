@@ -68,11 +68,12 @@ class LLMClientUtility(IUtility):
             
             # Use Google client to generate text
             # Use the conversational LLM model directly
+            self.logger.info(f"    🤖 Calling LLM (prompt length: {len(full_prompt)} chars)...")
             response = self._conversational_llm_model.invoke(full_prompt)
             
             # Extract content from response
             response_text = response.content if hasattr(response, 'content') else str(response)
-            self.logger.info(f"Generated text successfully. Response length: {len(response_text)} chars")
+            self.logger.info(f"    ✅ LLM response received ({len(response_text)} chars)")
             return response_text
         
         except Exception as e:
@@ -96,12 +97,15 @@ class LLMClientUtility(IUtility):
         
         try:
             # Use the embedding LLM model directly
+            self.logger.info(f"    🧮 Generating {len(texts)} embeddings...")
             embeddings = []
-            for text in texts:
+            for i, text in enumerate(texts, 1):
                 embedding = self._embedding_llm_model.embed_query(text)
                 embeddings.append(embedding)
+                if i % 5 == 0 or i == len(texts):
+                    self.logger.info(f"    📊 Generated {i}/{len(texts)} embeddings")
             
-            self.logger.info(f"Successfully generated {len(embeddings)} embeddings")
+            self.logger.info(f"    ✅ All embeddings generated")
             return embeddings
         
         except Exception as e:

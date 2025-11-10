@@ -5,29 +5,40 @@ import uuid
 from typing import Dict, Any
 import pdfplumber
 from docx import Document
-import logging
 
-from src.agents.base_agent import BaseAgent
-from src.models.schemas import CVData, Candidate, Experience, Education, Skills
-from src.utils.llm_client import llm_client
-from src.utils.helpers import (
-    extract_email,
-    extract_phone,
-    extract_urls,
-    calculate_duration_months,
-    clean_text,
-)
+from services.agents.base_agent import BaseAgent
 
+from start_utils import llm, embedding_llm
 
-logger = logging.getLogger(__name__)
+from utilities.llm_client import LLMClientUtility
+from utilities.helpers import clean_text
 
 
 class ParserAgent(BaseAgent):
     """Agent responsible for parsing CVs and extracting structured data."""
     
-    def __init__(self):
+    def __init__(
+        self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
         """Initialize the Parser Agent."""
-        super().__init__("parser_agent")
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.llm_client = LLMClientUtility(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+            conversational_llm_model=llm,
+            embedding_llm_model=embedding_llm,
+        )
     
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a CV file and extract structured data.
@@ -89,7 +100,7 @@ class ParserAgent(BaseAgent):
                 raise ValueError(f"Unsupported file type: {file_type}")
         
         except Exception as e:
-            logger.error(f"Error extracting text: {e}")
+            self.logger.error(f"Error extracting text: {e}")
             raise
     
     def _extract_from_pdf(self, file_path: str) -> str:
@@ -205,7 +216,7 @@ Be thorough and extract all relevant information. Use null for missing dates/num
 Return ONLY valid JSON, no additional text."""
 
         try:
-            response = await llm_client.generate(
+            response = await self.llm_client.generate(
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.1
@@ -227,7 +238,7 @@ Return ONLY valid JSON, no additional text."""
             # Calculate total experience
             total_months = 0
             for exp in cv_dict.get("experience", []):
-                duration = calculate_duration_months(
+                duration = self._calculate_duration_months(
                     exp.get("start_date", ""),
                     exp.get("end_date")
                 )
@@ -240,11 +251,11 @@ Return ONLY valid JSON, no additional text."""
             return cv_dict
         
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response as JSON: {e}")
+            self.logger.error(f"Failed to parse LLM response as JSON: {e}")
             # Fallback to basic extraction
             return await self._fallback_parsing(text)
         except Exception as e:
-            logger.error(f"Error in LLM parsing: {e}")
+            self.logger.error(f"Error in LLM parsing: {e}")
             return await self._fallback_parsing(text)
     
     async def _fallback_parsing(self, text: str) -> Dict[str, Any]:
@@ -260,8 +271,8 @@ Return ONLY valid JSON, no additional text."""
             "cv_id": str(uuid.uuid4()),
             "candidate": {
                 "name": "",
-                "email": extract_email(text) or "",
-                "phone": extract_phone(text) or "",
+                "email": self._extract_email(text) or "",
+                "phone": self._extract_phone(text) or "",
                 "location": "",
                 "linkedin": ""
             },

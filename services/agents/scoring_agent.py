@@ -1,21 +1,27 @@
 """Scoring Engine Agent for calculating candidate scores."""
 
-import logging
 from typing import Dict, Any, List
 
-from src.agents.base_agent import BaseAgent
-from src.models.schemas import Scores, Matches, SkillMatch
-
-
-logger = logging.getLogger(__name__)
+from services.agents.base_agent import BaseAgent
 
 
 class ScoringAgent(BaseAgent):
     """Agent responsible for scoring candidates."""
     
-    def __init__(self):
+    def __init__(
+        self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
         """Initialize the Scoring Agent."""
-        super().__init__("scoring_agent")
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
     
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate scores for a candidate.

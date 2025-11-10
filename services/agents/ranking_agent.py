@@ -1,22 +1,43 @@
 """Ranking Agent for creating final ranked candidate list."""
 
-import logging
 from typing import Dict, Any, List
 
-from src.agents.base_agent import BaseAgent
-from src.models.schemas import CandidateScore, CandidateTier
+from services.agents.base_agent import BaseAgent
 
+from dtos.enitities.candidate.tier import CandidateTier
 
-logger = logging.getLogger(__name__)
+from start_utils import llm, embedding_llm
+
+from utilities.llm_client import LLMClientUtility
+
 
 
 class RankingAgent(BaseAgent):
     """Agent responsible for ranking candidates."""
     
-    def __init__(self):
-        """Initialize the Ranking Agent."""
-        super().__init__("ranking_agent")
-    
+    def __init__(
+        self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
+        """Initialize the Parser Agent."""
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.llm_client = LLMClientUtility(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+            conversational_llm_model=llm,
+            embedding_llm_model=embedding_llm,
+        )
+
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Rank all candidates.
         
@@ -84,13 +105,13 @@ class RankingAgent(BaseAgent):
         for candidate in candidates:
             # Minimum score threshold
             if candidate["scores"]["total"] < 30:
-                logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - score too low")
+                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - score too low")
                 continue
             
             # Must have minimum required skills match
             skill_score = candidate["scores"]["skills_match"]
             if skill_score < 40:
-                logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - insufficient skills")
+                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - insufficient skills")
                 continue
             
             # Check for critical missing requirements
@@ -107,7 +128,7 @@ class RankingAgent(BaseAgent):
             )
             
             if has_critical_gaps and len(critical_skills) > 0:
-                logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - missing critical skills")
+                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - missing critical skills")
                 continue
             
             filtered.append(candidate)
@@ -126,7 +147,6 @@ class RankingAgent(BaseAgent):
         Returns:
             Candidates with ranks and tiers
         """
-        total = len(candidates)
         
         for i, candidate in enumerate(candidates):
             # Assign rank

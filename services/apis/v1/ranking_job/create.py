@@ -11,8 +11,8 @@ from constants.workflow_satus import WorkflowStatusConstant
 
 from dtos.responses.base import BaseResponseDTO
 
-from services.apis.v1.ranking_job.abstraction import IV1RankingJobService
 from services.agents.orchestrator_agent import OrchestratorAgent
+from services.apis.v1.ranking_job.abstraction import IV1RankingJobService
 
 
 class CreateRankingJobService(IV1RankingJobService):
@@ -28,8 +28,18 @@ class CreateRankingJobService(IV1RankingJobService):
         user_id: int = None,
         redis_session: Redis = None
     ) -> None:
-        super().__init__(urn, user_urn, api_name, user_id)
-        self.orchestrator = OrchestratorAgent()
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.orchestrator = OrchestratorAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
         self.redis_session = redis_session
 
     async def process_ranking_job(
@@ -121,7 +131,7 @@ class CreateRankingJobService(IV1RankingJobService):
             }
             self.redis_session.set(request_dto.job_id, job_data)
 
-            background_tasks: BackgroundTasks = request_dto.background_tasks or BackgroundTasks()
+            background_tasks: BackgroundTasks = request_dto.background_tasks
             background_tasks.add_task(
                 self.process_ranking_job,
                 request_dto.job_id,

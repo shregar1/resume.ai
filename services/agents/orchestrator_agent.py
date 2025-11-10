@@ -1,36 +1,63 @@
 """Orchestrator Agent for coordinating the multi-agent workflow."""
 
 import uuid
-import logging
 import asyncio
 from typing import Dict, Any, List
 from datetime import datetime
 
-from src.agents.base_agent import BaseAgent
-from src.agents.parser_agent import ParserAgent
-from src.agents.jd_analyzer_agent import JDAnalyzerAgent
-from src.agents.matching_agent import MatchingAgent
-from src.agents.scoring_agent import ScoringAgent
-from src.agents.ranking_agent import RankingAgent
-from src.models.schemas import WorkflowStatus
+from dtos.enitities.workflow.status import WorkflowStatus
 
-
-logger = logging.getLogger(__name__)
-
+from services.agents.base_agent import BaseAgent
+from services.agents.parser_agent import ParserAgent
+from services.agents.jd_analyzer_agent import JDAnalyzerAgent
+from services.agents.matching_agent import MatchingAgent
+from services.agents.scoring_agent import ScoringAgent
+from services.agents.ranking_agent import RankingAgent
 
 class OrchestratorAgent(BaseAgent):
     """Orchestrator agent that coordinates the entire ranking workflow."""
     
-    def __init__(self):
+    def __init__(
+        self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
         """Initialize the Orchestrator Agent."""
         super().__init__("orchestrator_agent")
         
         # Initialize specialized agents
-        self.parser_agent = ParserAgent()
-        self.jd_analyzer_agent = JDAnalyzerAgent()
-        self.matching_agent = MatchingAgent()
-        self.scoring_agent = ScoringAgent()
-        self.ranking_agent = RankingAgent()
+        self.parser_agent = ParserAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.jd_analyzer_agent = JDAnalyzerAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.matching_agent = MatchingAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.scoring_agent = ScoringAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.ranking_agent = RankingAgent(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
     
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Orchestrate the complete ranking workflow.

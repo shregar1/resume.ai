@@ -1,26 +1,31 @@
 """Base agent class for the multi-agent system."""
-
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
-import logging
-from datetime import datetime
 import uuid
 
-from src.models.schemas import AgentMessage
+from abc import abstractmethod
+from datetime import datetime
+from typing import Dict, Any, Optional
+
+from abstractions.agent import IAgent
+
+from dtos.services.agents.message import AgentMessage
 
 
-class BaseAgent(ABC):
+class BaseAgent(IAgent):
     """Base class for all agents in the system."""
     
-    def __init__(self, agent_name: str):
-        """Initialize the agent.
-        
-        Args:
-            agent_name: Name of the agent
-        """
-        self.agent_name = agent_name
-        self.logger = logging.getLogger(f"agent.{agent_name}")
-        self.logger.info(f"Initializing {agent_name}")
+    def __init__(self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.logger.info("Initializing base agent")
     
     @abstractmethod
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -91,4 +96,3 @@ class BaseAgent(ABC):
             metrics: Metrics to log
         """
         self.logger.info(f"Metrics for {self.agent_name}: {metrics}")
-

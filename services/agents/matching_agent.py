@@ -1,24 +1,49 @@
 """Matching Agent for semantic CV-JD matching."""
 
-import logging
 from typing import Dict, Any, List
 import numpy as np
 
-from src.agents.base_agent import BaseAgent
-from src.utils.llm_client import llm_client
-from src.utils.helpers import normalize_skill
+from services.agents.base_agent import BaseAgent
+from utilities.llm_client import LLMClientUtility
+from utilities.helpers import normalize_skill
 
-
-logger = logging.getLogger(__name__)
+from start_utils import CONVERSATIONAL_LLM_MODEL, EMBEDDING_LLM_MODEL
 
 
 class MatchingAgent(BaseAgent):
     """Agent responsible for matching CVs with job requirements."""
     
-    def __init__(self):
+    def __init__(self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
         """Initialize the Matching Agent."""
-        super().__init__("matching_agent")
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+        )
+        self.llm_client = LLMClientUtility(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+            conversational_llm_model=CONVERSATIONAL_LLM_MODEL,
+            embedding_llm_model=EMBEDDING_LLM_MODEL,
+        )
+        self.logger.info("MatchingAgent initialized")
+
+    @property
+    def llm_client(self):
+        return self._llm_client
     
+    @llm_client.setter
+    def llm_client(self, value):
+        self._llm_client = value
+
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Match a CV against job requirements.
         
@@ -180,7 +205,7 @@ class MatchingAgent(BaseAgent):
             cv_summary = self._create_cv_summary(cv_data)
             
             # Generate CV embedding
-            cv_embedding = await llm_client.generate_embeddings([cv_summary])
+            cv_embedding = await self.llm_client.generate_embeddings([cv_summary])
             
             if not cv_embedding or not jd_embeddings.get("full_description"):
                 return 50.0  # Default score
@@ -195,7 +220,7 @@ class MatchingAgent(BaseAgent):
             return max(0, min(100, similarity * 100))
         
         except Exception as e:
-            logger.error(f"Error in semantic matching: {e}")
+            self.logger.error(f"Error in semantic matching: {e}")
             return 50.0
     
     def _create_cv_summary(self, cv_data: Dict[str, Any]) -> str:
@@ -251,7 +276,7 @@ class MatchingAgent(BaseAgent):
             
             return float(dot_product / (norm1 * norm2))
         except Exception as e:
-            logger.error(f"Error calculating cosine similarity: {e}")
+            self.logger.error(f"Error calculating cosine similarity: {e}")
             return 0.0
     
     def _match_experience(

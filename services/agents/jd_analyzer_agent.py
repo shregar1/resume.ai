@@ -2,30 +2,50 @@
 
 import json
 import uuid
+
 from typing import Dict, Any, List
-import logging
 
-from src.agents.base_agent import BaseAgent
-from src.models.schemas import (
-    JobDescription,
-    JobRequirements,
-    SkillRequirement,
-    ScoringWeights,
-    SeniorityLevel,
-)
-from src.utils.llm_client import llm_client
+from services.agents.base_agent import BaseAgent
 
+from start_utils import llm, embedding_llm
 
-logger = logging.getLogger(__name__)
-
+from utilities.llm_client import LLMClientUtility
 
 class JDAnalyzerAgent(BaseAgent):
     """Agent responsible for analyzing job descriptions."""
     
-    def __init__(self):
+    def __init__(
+        self,
+        urn: str = None,
+        user_urn: str = None,
+        api_name: str = None,
+        user_id: str = None,
+    ):
         """Initialize the JD Analyzer Agent."""
-        super().__init__("jd_analyzer_agent")
+        super().__init__(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id
+        )
+        self.llm_client = LLMClientUtility(
+            urn=urn,
+            user_urn=user_urn,
+            api_name=api_name,
+            user_id=user_id,
+            conversational_llm_model=llm,
+            embedding_llm_model=embedding_llm,
+        )
+        self.logger.info("JDAnalyzerAgent initialized")
     
+    @property
+    def llm_client(self):
+        return self._llm_client
+    
+    @llm_client.setter
+    def llm_client(self, value):
+        self._llm_client = value
+
     async def process(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a job description and extract requirements.
         
@@ -120,7 +140,7 @@ Job Description:
 Return ONLY valid JSON, no additional text."""
 
         try:
-            response = await llm_client.generate(
+            response = await self.llm_client.generate(
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.1
@@ -143,7 +163,7 @@ Return ONLY valid JSON, no additional text."""
             return jd_dict
         
         except Exception as e:
-            logger.error(f"Error analyzing JD with LLM: {e}")
+            self.logger.error(f"Error analyzing JD with LLM: {e}")
             # Fallback
             return {
                 "jd_id": str(uuid.uuid4()),
@@ -170,7 +190,10 @@ Return ONLY valid JSON, no additional text."""
                 "full_description": jd_text
             }
     
-    async def _generate_embeddings(self, jd_data: Dict[str, Any]) -> Dict[str, List[float]]:
+    async def _generate_embeddings(
+        self,
+        jd_data: Dict[str, Any]
+    ) -> Dict[str, List[float]]:
         """Generate embeddings for semantic matching.
         
         Args:
@@ -180,13 +203,14 @@ Return ONLY valid JSON, no additional text."""
             Dictionary of embeddings
         """
         try:
+
             texts_to_embed = [
                 jd_data.get("full_description", ""),
                 " ".join([s["skill"] for s in jd_data.get("requirements", {}).get("must_have_skills", [])]),
                 " ".join(jd_data.get("responsibilities", []))
             ]
             
-            embeddings_list = await llm_client.generate_embeddings(texts_to_embed)
+            embeddings_list = await self.llm_client.generate_embeddings(texts_to_embed)
             
             return {
                 "full_description": embeddings_list[0],
@@ -195,7 +219,7 @@ Return ONLY valid JSON, no additional text."""
             }
         
         except Exception as e:
-            logger.error(f"Error generating embeddings: {e}")
+            self.logger.error(f"Error generating embeddings: {e}")
             return {
                 "full_description": [],
                 "skills": [],

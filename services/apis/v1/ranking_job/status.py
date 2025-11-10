@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 from pydantic import BaseModel
 from redis import Redis
@@ -45,14 +46,16 @@ class FetchRankingJobStatusService(IV1RankingJobService):
                     httpStatusCode=HTTPStatus.BAD_REQUEST
                 )
             
-            job_data = self.redis_session.get(job_id)
+            job_data_bytes = self.redis_session.get(job_id)
 
-            if not job_data:
+            if not job_data_bytes:
                 raise NotFoundError(
                     responseMessage="Job not found",
                     responseKey="error_job_not_found",
                     httpStatusCode=HTTPStatus.NOT_FOUND
                 )
+            
+            job_data = json.loads(job_data_bytes)
             
             response_payload: Dict[str, Any] = {
                 "job_id": job_id,

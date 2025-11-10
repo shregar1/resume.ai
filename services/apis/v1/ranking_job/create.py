@@ -64,18 +64,28 @@ class CreateRankingJobService(IV1RankingJobService):
             self.logger.info(f"Processing ranking job {job_id}")
 
             self.redis_session.set(job_id, json.dumps({
-                "status": WorkflowStatusConstant.PROCESSING,
+                "status": WorkflowStatusConstant.PARSING,
                 "created_at": datetime.now().isoformat(),
                 "cv_count": len(cv_files),
                 "job_title": job_title,
                 "company": company
             }))
 
+            # Convert file paths to dict format expected by orchestrator
+            cv_files_data = []
+            for cv_file_path in cv_files:
+                import os
+                file_ext = os.path.splitext(cv_file_path)[1].replace(".", "")
+                cv_files_data.append({
+                    "file_path": cv_file_path,
+                    "file_type": file_ext
+                })
+            
             result = await self.orchestrator.process({
                 "job_description": job_description,
                 "job_title": job_title,
                 "company": company,
-                "cv_files": cv_files
+                "cv_files": cv_files_data
             })
             
             if result.get("success"):
@@ -103,9 +113,10 @@ class CreateRankingJobService(IV1RankingJobService):
 
             for cv_file in cv_files:
                 try:
-                    os.remove(cv_file["file_path"])
+                    # cv_file is a string (file path)
+                    os.remove(cv_file)
                 except Exception as e:
-                    self.logger.warning(f"Could not delete file {cv_file['file_path']}: {e}")
+                    self.logger.warning(f"Could not delete file {cv_file}: {e}")
         
         except Exception as e:
             self.logger.error(f"Error processing job {job_id}: {e}", exc_info=True)

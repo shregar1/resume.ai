@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 from pydantic import BaseModel
 from redis import Redis
@@ -45,14 +46,16 @@ class FetchRankingJobResultService(IV1RankingJobService):
                     httpStatusCode=HTTPStatus.BAD_REQUEST
                 )
             
-            job_data = self.redis_session.get(job_id)
+            job_data_bytes = self.redis_session.get(job_id)
 
-            if not job_data:
+            if not job_data_bytes:
                 raise NotFoundError(
                     responseMessage="Job not found",
                     responseKey="error_job_not_found",
                     httpStatusCode=HTTPStatus.NOT_FOUND
                 )
+            
+            job_data = json.loads(job_data_bytes)
 
             if job_data["status"] != WorkflowStatusConstant.COMPLETED:
                 raise BadInputError(
@@ -64,8 +67,10 @@ class FetchRankingJobResultService(IV1RankingJobService):
             results = job_data.get("results", {})
             ranked_candidates = results.get("ranked_candidates", [])
             
-            if request_dto.top_n:
-                ranked_candidates = ranked_candidates[:request_dto.top_n]
+            # Apply top_n filter if specified
+            top_n = getattr(request_dto, 'top_n', None)
+            if top_n:
+                ranked_candidates = ranked_candidates[:top_n]
             
             candidates = []
             for candidate in ranked_candidates:

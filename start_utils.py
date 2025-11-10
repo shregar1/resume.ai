@@ -14,10 +14,12 @@ from sqlalchemy.orm import sessionmaker
 
 from configurations.cache import CacheConfiguration, CacheConfigurationDTO
 from configurations.db import DBConfiguration, DBConfigurationDTO
-from configurations.usda import USDAConfiguration, USDAConfigurationDTO
 
 from constants.default import Default
 
+
+"""In-memory storage for job results."""
+job_store: dict = {}
 
 logger.remove(0)
 logger.add(
@@ -38,7 +40,6 @@ load_dotenv()
 logger.info("Loading Configurations")
 cache_configuration: CacheConfigurationDTO = CacheConfiguration().get_config()
 db_configuration: DBConfigurationDTO = DBConfiguration().get_config()
-usda_configuration: USDAConfigurationDTO = USDAConfiguration().get_config()
 logger.info("Loaded Configurations")
 
 # Access environment variables
@@ -53,7 +54,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
     )
 )
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
-USDA_API_KEY: str = os.getenv("USDA_API_KEY")
+TEMP_DIRECTORY: str = os.getenv("TEMP_DIRECTORY")
 RATE_LIMIT_REQUESTS_PER_MINUTE: int = int(
     os.getenv(
         "RATE_LIMIT_REQUESTS_PER_MINUTE",

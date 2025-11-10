@@ -1,46 +1,39 @@
-import aiofiles
-import os
-import uuid
-
-from fastapi import Request, Depends, BackgroundTasks, UploadFile, File, Form
+from fastapi import Request, Query, Depends
 from fastapi.responses import JSONResponse
 from http import HTTPStatus
 from redis import Redis
-from typing import List
 
 from constants.api_lk import APILK
 from constants.api_status import APIStatus
-from constants.file_type import FileTypeConstant
-from constants.upload import UploadConstant
 
 from controllers.apis.v1.ranking_job.abstraction import IV1RankingJobController
 
 from dependencies.cache import CacheDependency
 from dependencies.utilities.dictionary import DictionaryUtilityDependency
 
-from dtos.requests.ranking_job.create import CreateRankingJobRequestDTO
+from dtos.requests.ranking_job.result import FetchRankingJobResultRequestDTO
 from dtos.responses.base import BaseResponseDTO
 
 from errors.bad_input_error import BadInputError
 from errors.not_found_error import NotFoundError
 from errors.unexpected_response_error import UnexpectedResponseError
 
-from services.apis.v1.ranking_job.create import CreateRankingJobService
+from services.apis.v1.ranking_job.result import FetchRankingJobResultService
 
-from start_utils import TEMP_DIRECTORY
 
 from utilities.dictionary import DictionaryUtility
 
-class CreateRankingJobController(IV1RankingJobController):
+
+class FetchRankingJobResultController(IV1RankingJobController):
     """
-    Controller for creating a ranking job.
-    Handles POST requests for creating a ranking job endpoints.
+    Controller for fetching the result of a ranking job.
+    Handles GET requests for fetching the result of a ranking job.
     """
     def __init__(self, urn: str = None) -> None:
         super().__init__(urn)
         self._urn = urn
         self._user_urn = None
-        self._api_name = APILK.CREATE_RANKING_JOB
+        self._api_name = APILK.FETCH_RANKING_JOB_RESULT
         self._user_id = None
         self._logger = self.logger
         self._dictionary_utility = None
@@ -93,14 +86,10 @@ class CreateRankingJobController(IV1RankingJobController):
     def dictionary_utility(self, value):
         self._dictionary_utility = value
 
-    async def post(
+    async def get(
         self,
         request: Request,
-        background_tasks: BackgroundTasks,
-        job_description: str = Form(...),
-        job_title: str = Form(""),
-        company: str = Form(""),
-        cv_files: List[UploadFile] = File(...),
+        job_id: str = Query(...),
         dictionary_utility: DictionaryUtility = Depends(
             DictionaryUtilityDependency.derive
         ),
@@ -126,74 +115,25 @@ class CreateRankingJobController(IV1RankingJobController):
                 )
             )
 
-            if not cv_files:
+            if not job_id:
                 raise BadInputError(
-                    responseMessage="No CV files provided",
-                    responseKey="no_cv_files_provided",
-                    httpStatusCode=HTTPStatus.BAD_REQUEST
+                    status_code=400,
+                    responseMessage="Job ID is required",
+                    responseKey="error_job_id_required"
                 )
             
-            if len(cv_files) > 100:
-                raise BadInputError(
-                    responseMessage="Maximum 100 CVs allowed per job",
-                    responseKey="maximum_100_cvs_allowed_per_job",
-                    httpStatusCode=HTTPStatus.BAD_REQUEST
-                )
-            
-            job_id = str(uuid.uuid4())
-            temp_path = os.path.join(TEMP_DIRECTORY, job_id)
-            os.makedirs(temp_path, exist_ok=True)
-            
-            saved_files = []
-            for i, cv_file in enumerate[UploadFile](cv_files):
-
-                file_ext = os.path.splitext(cv_file.filename)[1].lower()
-                if file_ext.strip(".") not in FileTypeConstant.ALLOWED_EXTENSIONS:
-                    raise BadInputError(
-                        responseMessage=f"Unsupported file type: {file_ext}. Allowed: {', '.join(FileTypeConstant.ALLOWED_EXTENSIONS)}",
-                        responseKey="unsupported_file_type",
-                        httpStatusCode=HTTPStatus.BAD_REQUEST
-                    )
-                
-                file_path = os.path.join(temp_path, f"{i}_{cv_file.filename}")
-                
-                async with aiofiles.open(file_path, 'wb') as f:
-                    content = await cv_file.read()
-                    
-                    if len(content) > UploadConstant.MAX_UPLOAD_SIZE_MB * 1024 * 1024:
-                        raise BadInputError(
-                            responseMessage=f"File {cv_file.filename} exceeds maximum size of {UploadConstant.MAX_UPLOAD_SIZE_MB}MB",
-                            responseKey="file_exceeds_maximum_size",
-                            httpStatusCode=HTTPStatus.BAD_REQUEST
-                        )
-                    
-                    await f.write(content)
-                
-                saved_files.append({
-                    "file_path": file_path,
-                    "file_type": file_ext.replace(".", ""),
-                    "original_name": cv_file.filename
-                })
-
-
-            service: CreateRankingJobService = CreateRankingJobService(
+            service: FetchRankingJobResultService = FetchRankingJobResultService(
                 urn=self.urn,
                 user_urn=self.user_urn,
                 api_name=self.api_name,
                 user_id=self.user_id,
                 redis_session=redis_session
             )
-
-            response_dto = service.run(
-                request_dto=CreateRankingJobRequestDTO(
-                    job_id=job_id,
-                    job_description=job_description,
-                    job_title=job_title,
-                    company=company,
-                    cv_files=saved_files
+            response_dto = await service.run(
+                request_dto=FetchRankingJobResultRequestDTO(
+                    job_id=job_id
                 )
             )
-
             self.logger.debug("Preparing response metadata")
             httpStatusCode = HTTPStatus.OK
             self.logger.debug("Prepared response metadata")

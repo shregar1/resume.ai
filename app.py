@@ -16,6 +16,7 @@ from loguru import logger
 
 from constants.default import Default
 from controllers.apis import router as APISRouter
+from middlewares.request_context import RequestContextMiddleware
 
 app = FastAPI()
 
@@ -88,6 +89,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+# Add request context middleware to generate URNs for each request
+app.add_middleware(RequestContextMiddleware)
 logger.info("Initialised middleware stack")
 
 logger.info("Initialising routers")

@@ -151,5 +151,5 @@ class CreateRankingJobService(IV1RankingJobService):
             )
 
         except Exception as e:
-            self.self.logger.error(f"Error creating ranking job: {e}")
+            self.logger.error(f"Error creating ranking job: {e}")
             raise e

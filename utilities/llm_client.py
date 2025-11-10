@@ -16,24 +16,24 @@ class LLMClientUtility(IUtility):
         embedding_llm_model: str = None
     ) -> None:
         super().__init__(urn, user_urn, api_name, user_id)
-        self.conversational_llm_model = conversational_llm_model
-        self.embedding_llm_model = embedding_llm_model
+        self._conversational_llm_model = conversational_llm_model
+        self._embedding_llm_model = embedding_llm_model
 
     @property
     def conversational_llm_model(self):
-        return self.conversational_llm_model
+        return self._conversational_llm_model
 
     @conversational_llm_model.setter
     def conversational_llm_model(self, value):
-        self.conversational_llm_model = value
+        self._conversational_llm_model = value
 
     @property
     def embedding_llm_model(self):
-        return self.embedding_llm_model
+        return self._embedding_llm_model
 
     @embedding_llm_model.setter
     def embedding_llm_model(self, value):
-        self.embedding_llm_model = value
+        self._embedding_llm_model = value
 
     async def generate(
         self,

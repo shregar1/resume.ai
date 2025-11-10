@@ -10,38 +10,16 @@ class TestRequestDTOs:
     """Test cases for request DTOs."""
     
     def test_user_login_request_dto(self):
-        """Test UserLoginRequestDTO validation."""
-        from dtos.requests.user.login import UserLoginRequestDTO
-        
-        # Valid data
-        dto = UserLoginRequestDTO(
-            email="test@example.com",
-            password="password123"
-        )
-        
-        assert dto.email == "test@example.com"
-        assert dto.password == "password123"
+        """Test UserLoginRequestDTO validation - skipped as user modules removed."""
+        pytest.skip("User login DTOs have been removed from the codebase")
     
     def test_user_login_request_dto_invalid_email(self):
-        """Test UserLoginRequestDTO rejects invalid email."""
-        from dtos.requests.user.login import UserLoginRequestDTO
-        
-        with pytest.raises(ValidationError):
-            UserLoginRequestDTO(
-                email="not-an-email",
-                password="password123"
-            )
+        """Test UserLoginRequestDTO rejects invalid email - skipped as user modules removed."""
+        pytest.skip("User login DTOs have been removed from the codebase")
     
     def test_user_registration_request_dto(self):
-        """Test UserRegistrationRequestDTO validation."""
-        from dtos.requests.user.registration import UserRegistrationRequestDTO
-        
-        dto = UserRegistrationRequestDTO(
-            email="test@example.com",
-            password="password123"
-        )
-        
-        assert dto.email == "test@example.com"
+        """Test UserRegistrationRequestDTO validation - skipped as user modules removed."""
+        pytest.skip("User registration DTOs have been removed from the codebase")
 
 
 @pytest.mark.unit

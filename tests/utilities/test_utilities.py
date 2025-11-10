@@ -146,10 +146,12 @@ class TestJWTUtility:
     
     def test_create_access_token(self, jwt_utility):
         """Test access token creation."""
+        from unittest.mock import patch
+        
         data = {"user_id": 123, "email": "test@example.com"}
         
-        with pytest.patch('start_utils.SECRET_KEY', 'test-secret'):
-            with pytest.patch('start_utils.ALGORITHM', 'HS256'):
+        with patch('start_utils.SECRET_KEY', 'test-secret'):
+            with patch('start_utils.ALGORITHM', 'HS256'):
                 token = jwt_utility.create_access_token(data)
         
         assert isinstance(token, str)
@@ -157,10 +159,12 @@ class TestJWTUtility:
     
     def test_decode_token_valid(self, jwt_utility):
         """Test decoding valid token."""
+        from unittest.mock import patch
+        
         data = {"user_id": 123}
         
-        with pytest.patch('start_utils.SECRET_KEY', 'test-secret'):
-            with pytest.patch('start_utils.ALGORITHM', 'HS256'):
+        with patch('start_utils.SECRET_KEY', 'test-secret'):
+            with patch('start_utils.ALGORITHM', 'HS256'):
                 token = jwt_utility.create_access_token(data)
                 decoded = jwt_utility.decode_token(token)
         
@@ -168,8 +172,10 @@ class TestJWTUtility:
     
     def test_decode_token_invalid(self, jwt_utility):
         """Test decoding invalid token raises error."""
-        with pytest.patch('start_utils.SECRET_KEY', 'test-secret'):
-            with pytest.patch('start_utils.ALGORITHM', 'HS256'):
+        from unittest.mock import patch
+        
+        with patch('start_utils.SECRET_KEY', 'test-secret'):
+            with patch('start_utils.ALGORITHM', 'HS256'):
                 with pytest.raises(Exception):
                     jwt_utility.decode_token("invalid.token.here")
 

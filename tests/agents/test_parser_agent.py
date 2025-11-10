@@ -58,10 +58,14 @@ class TestParserAgent:
     @pytest.mark.asyncio
     async def test_extract_text_pdf(self, parser_agent):
         """Test text extraction from PDF."""
-        mock_pdf = Mock()
+        from unittest.mock import MagicMock
+        
+        mock_pdf = MagicMock()
         mock_page = Mock()
         mock_page.extract_text.return_value = "PDF content"
         mock_pdf.pages = [mock_page]
+        mock_pdf.__enter__ = Mock(return_value=mock_pdf)
+        mock_pdf.__exit__ = Mock(return_value=False)
         
         with patch('pdfplumber.open', return_value=mock_pdf):
             with patch('services.agents.parser_agent.clean_text', return_value="Cleaned PDF content"):

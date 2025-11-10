@@ -1,4 +1,4 @@
-from fastapi import Request, Query, Depends
+from fastapi import Request, Path, Depends
 from fastapi.responses import JSONResponse
 from http import HTTPStatus
 from redis import Redis
@@ -89,7 +89,7 @@ class FetchRankingJobResultController(IV1RankingJobController):
     async def get(
         self,
         request: Request,
-        job_id: str = Query(...),
+        job_id: str = Path(...),
         dictionary_utility: DictionaryUtility = Depends(
             DictionaryUtilityDependency.derive
         ),

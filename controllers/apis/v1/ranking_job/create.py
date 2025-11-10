@@ -111,7 +111,7 @@ class CreateRankingJobController(IV1RankingJobController):
         try:
 
             self.logger.debug("Fetching request URN")
-            self.urn = request.state.urn
+            self.urn = getattr(request.state, "urn", str(uuid.uuid4()))
             self.user_id = getattr(request.state, "user_id", None)
             self.user_urn = getattr(request.state, "user_urn", None)
             self.logger = self.logger.bind(

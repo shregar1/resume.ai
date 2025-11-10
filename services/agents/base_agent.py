@@ -25,6 +25,7 @@ class BaseAgent(IAgent):
             api_name=api_name,
             user_id=user_id,
         )
+        self.agent_name = self.__class__.__name__
         self.logger.info("Initializing base agent")
     
     @abstractmethod

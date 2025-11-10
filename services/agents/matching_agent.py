@@ -7,7 +7,7 @@ from services.agents.base_agent import BaseAgent
 from utilities.llm_client import LLMClientUtility
 from utilities.helpers import normalize_skill
 
-from start_utils import CONVERSATIONAL_LLM_MODEL, EMBEDDING_LLM_MODEL
+from start_utils import llm, embedding_llm
 
 
 class MatchingAgent(BaseAgent):
@@ -31,8 +31,8 @@ class MatchingAgent(BaseAgent):
             user_urn=user_urn,
             api_name=api_name,
             user_id=user_id,
-            conversational_llm_model=CONVERSATIONAL_LLM_MODEL,
-            embedding_llm_model=EMBEDDING_LLM_MODEL,
+            conversational_llm_model=llm,
+            embedding_llm_model=embedding_llm,
         )
         self.logger.info("MatchingAgent initialized")
 

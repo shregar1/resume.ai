@@ -8,6 +8,8 @@ class APILK:
     """
     Logical keys for API operations, used for routing and identification.
     """
-    LOGIN: Final[str] = "LOGIN"
-    REGISTRATION: Final[str] = "REGISTRATION"
-    LOGOUT: Final[str] = "LOGOUT"
+    
+    # Ranking Job APIs
+    CREATE_RANKING_JOB: Final[str] = "CREATE_RANKING_JOB"
+    FETCH_RANKING_JOB_STATUS: Final[str] = "FETCH_RANKING_JOB_STATUS"
+    FETCH_RANKING_JOB_RESULT: Final[str] = "FETCH_RANKING_JOB_RESULT"

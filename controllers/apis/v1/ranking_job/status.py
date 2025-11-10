@@ -1,4 +1,4 @@
-from fastapi import Request, Query, Depends
+from fastapi import Request, Path, Depends
 from fastapi.responses import JSONResponse
 from http import HTTPStatus
 
@@ -16,7 +16,7 @@ from errors.bad_input_error import BadInputError
 from errors.not_found_error import NotFoundError
 from errors.unexpected_response_error import UnexpectedResponseError
 
-from services.apis.v1.ranking_job.status import StatusRankingJobService
+from services.apis.v1.ranking_job.status import FetchRankingJobStatusService
 
 
 from utilities.dictionary import DictionaryUtility
@@ -87,7 +87,7 @@ class FetchRankingJobStatusController(IV1RankingJobController):
     async def get(
         self,
         request: Request,
-        job_id: str = Query(...),
+        job_id: str = Path(...),
         dictionary_utility: DictionaryUtility = Depends(
             DictionaryUtilityDependency.derive
         )

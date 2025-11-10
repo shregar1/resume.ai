@@ -53,7 +53,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
     )
 )
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY")
-TEMP_DIRECTORY: str = os.getenv("TEMP_DIRECTORY")
+TEMP_DIRECTORY: str = os.getenv("TEMP_DIRECTORY", "data/temp")
 RATE_LIMIT_REQUESTS_PER_MINUTE: int = int(
     os.getenv(
         "RATE_LIMIT_REQUESTS_PER_MINUTE",

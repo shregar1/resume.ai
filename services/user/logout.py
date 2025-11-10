@@ -89,28 +89,30 @@ class UserLogoutService(IUserService):
         self._jwt_utility = value
 
     async def run(self) -> dict:
-
-        self.logger.debug("Fetching user")
+        self.logger.info(f"Starting user logout process for user_id: {self.user_id}")
+        
+        self.logger.debug("Fetching user from database")
         user: User = self.user_repository.retrieve_record_by_id_is_logged_in(
             id=self.user_id, is_logged_in=True
         )
-        self.logger.debug("Fetched user")
+        self.logger.debug("Fetched user from database")
 
         if not user:
+            self.logger.warning(f"Logout attempt failed: User not found or not logged in for user_id {self.user_id}")
             raise BadInputError(
                 responseMessage="User not Found. Incorrect user id.",
                 responseKey="error_authorisation_failed",
                 httpStatusCode=HTTPStatus.BAD_REQUEST,
             )
 
-        self.logger.debug("Updating logged out status")
+        self.logger.debug(f"Updating logged out status for user {user.id}")
         user: User = self.user_repository.update_record(
             id=user.id,
             new_data={
                 "is_logged_in": False,
             },
         )
-        self.logger.debug("Updated logged out status")
+        self.logger.info(f"User logout successful for user_id: {self.user_id}, user_urn: {user.urn}")
 
         return BaseResponseDTO(
             transactionUrn=self.urn,

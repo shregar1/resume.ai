@@ -56,12 +56,15 @@ class LLMClientUtility(IUtility):
             Generated text
         """
         model = model or self._conversational_llm_model
+        self.logger.info(f"Generating text with model={model}, temp={temperature}, max_tokens={max_tokens}")
+        self.logger.debug(f"Prompt length: {len(prompt)} chars, System prompt: {'Yes' if system_prompt else 'No'}")
         
         try:
             # Combine system prompt with user prompt if provided
             full_prompt = prompt
             if system_prompt:
                 full_prompt = f"{system_prompt}\n\n{prompt}"
+                self.logger.debug(f"Combined full prompt length: {len(full_prompt)} chars")
             
             # Use Google client to generate text
             response = await self.google_client.generate(
@@ -71,10 +74,11 @@ class LLMClientUtility(IUtility):
                 max_tokens=max_tokens
             )
             
+            self.logger.info(f"Generated text successfully. Response length: {len(response)} chars")
             return response
         
         except Exception as e:
-            self.logger.error(f"Error generating text with Gemini: {e}")
+            self.logger.error(f"Error generating text with Gemini: {e}", exc_info=True)
             raise
     
     async def generate_embeddings(
@@ -89,13 +93,17 @@ class LLMClientUtility(IUtility):
         Returns:
             List of embedding vectors
         """
-
+        self.logger.info(f"Generating embeddings for {len(texts)} texts")
+        self.logger.debug(f"Average text length: {sum(len(t) for t in texts) / len(texts):.0f} chars")
+        
         try:
-            return await self.google_client.generate_embeddings(
+            embeddings = await self.google_client.generate_embeddings(
                 texts=texts,
                 model=self.embedding_llm_model
             )
+            self.logger.info(f"Successfully generated {len(embeddings)} embeddings")
+            return embeddings
         
         except Exception as e:
-            self.logger.error(f"Error generating embeddings with Gemini: {e}")
+            self.logger.error(f"Error generating embeddings with Gemini: {e}", exc_info=True)
             raise

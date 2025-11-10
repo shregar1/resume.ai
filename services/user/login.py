@@ -94,17 +94,19 @@ class UserLoginService(IUserService):
         self._jwt_utility = value
 
     async def run(self, request_dto: UserLoginRequestDTO) -> dict:
-
-        self.logger.debug("Fetching user")
+        self.logger.info(f"Starting user login process for email: {request_dto.email}")
+        
+        self.logger.debug("Fetching user from database")
         user: User = (
             self.user_repository.retrieve_record_by_email(
                 email=request_dto.email,
                 is_deleted=False,
             )
         )
-        self.logger.debug("Fetched user")
+        self.logger.debug("Fetched user from database")
 
         if not user:
+            self.logger.warning(f"Login attempt failed: User not found for email {request_dto.email}")
             raise NotFoundError(
                 responseMessage="User not Found. Incorrect email.",
                 responseKey="error_authorisation_failed",
@@ -115,13 +117,14 @@ class UserLoginService(IUserService):
             request_dto.password.encode("utf8"),
             user.password.encode("utf8"),
         ):
+            self.logger.warning(f"Login attempt failed: Incorrect password for email {request_dto.email}")
             raise BadInputError(
                 responseMessage="Incorrect password.",
                 responseKey="error_authorisation_failed",
                 httpStatusCode=HTTPStatus.BAD_REQUEST,
             )
 
-        self.logger.debug("Updating logged in status")
+        self.logger.debug(f"Updating logged in status for user {user.id}")
         user: User = self.user_repository.update_record(
             id=user.id,
             new_data={
@@ -130,7 +133,7 @@ class UserLoginService(IUserService):
                 "updated_on": datetime.now(),
             },
         )
-        self.logger.debug("Updated logged in status")
+        self.logger.debug("Updated logged in status successfully")
 
         payload = {
             "user_id": user.id,
@@ -138,7 +141,9 @@ class UserLoginService(IUserService):
             "user_email": user.email,
             "last_login": str(user.updated_on),
         }
+        self.logger.debug("Creating JWT access token")
         token: str = self.jwt_utility.create_access_token(data=payload)
+        self.logger.info(f"User login successful for email: {request_dto.email}, user_urn: {user.urn}")
 
         return BaseResponseDTO(
             transactionUrn=self.urn,

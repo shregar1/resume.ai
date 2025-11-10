@@ -56,26 +56,39 @@ class MatchingAgent(BaseAgent):
         Returns:
             Dictionary containing match results
         """
+        cv_id = data.get("cv_data", {}).get("cv_id", "Unknown")
+        jd_id = data.get("jd_data", {}).get("jd_id", "Unknown")
+        self.logger.info(f"Starting matching - CV: {cv_id} vs JD: {jd_id}")
         try:
             cv_data = data.get("cv_data")
             jd_data = data.get("jd_data")
             jd_embeddings = data.get("jd_embeddings", {})
             
             if not cv_data or not jd_data:
+                self.logger.error("cv_data and jd_data are required but not provided")
                 raise ValueError("cv_data and jd_data are required")
             
             # Perform skill matching
+            self.logger.debug("Performing skill matching")
             skill_matches = await self._match_skills(cv_data, jd_data)
+            self.logger.info(f"Skill matching complete. Matched {len(skill_matches.get('matched_skills', []))} skills")
             
             # Perform semantic matching
+            self.logger.debug("Performing semantic matching")
             semantic_score = await self._semantic_match(cv_data, jd_data, jd_embeddings)
+            self.logger.info(f"Semantic matching complete. Score: {semantic_score}")
             
             # Match experience
+            self.logger.debug("Matching experience requirements")
             experience_match = self._match_experience(cv_data, jd_data)
+            self.logger.debug(f"Experience match: {experience_match}")
             
             # Match education
+            self.logger.debug("Matching education requirements")
             education_match = self._match_education(cv_data, jd_data)
+            self.logger.debug(f"Education match: {education_match}")
             
+            self.logger.info("Matching process completed successfully")
             return {
                 "success": True,
                 "matches": {
@@ -87,6 +100,7 @@ class MatchingAgent(BaseAgent):
             }
         
         except Exception as e:
+            self.logger.error(f"Failed to match CV against JD: {str(e)}", exc_info=True)
             return await self.handle_error(e, data)
     
     async def _match_skills(

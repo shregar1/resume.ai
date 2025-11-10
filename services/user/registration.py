@@ -83,22 +83,22 @@ class UserRegistrationService(IUserService):
         self._user_repository = value
 
     async def run(self, request_dto: UserRegistrationRequestDTO) -> dict:
-
-        self.logger.debug("Checking if user exists")
+        self.logger.info(f"Starting user registration process for email: {request_dto.email}")
+        
+        self.logger.debug("Checking if user already exists in database")
         user: User = self.user_repository.retrieve_record_by_email(
             email=request_dto.email
         )
 
         if user:
-
-            self.logger.debug("User already exists")
+            self.logger.warning(f"Registration attempt failed: Email already registered {request_dto.email}")
             raise BadInputError(
                 responseMessage="Email already registered.",
                 responseKey="error_email_already_registered",
                 httpStatusCode=HTTPStatus.BAD_REQUEST,
             )
 
-        self.logger.debug("Preparing user data")
+        self.logger.debug("Preparing user data with hashed password")
         user: User = User(
             urn=ulid.ulid(),
             email=request_dto.email,
@@ -111,8 +111,9 @@ class UserRegistrationService(IUserService):
             created_on=datetime.now(),
         )
 
+        self.logger.debug("Creating user record in database")
         user: User = self.user_repository.create_record(record=user)
-        self.logger.debug("Preparing user data")
+        self.logger.info(f"User registration successful for email: {request_dto.email}, user_urn: {user.urn}")
 
         return BaseResponseDTO(
             transactionUrn=self.urn,

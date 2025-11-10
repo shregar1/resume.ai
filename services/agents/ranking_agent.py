@@ -49,18 +49,22 @@ class RankingAgent(BaseAgent):
         Returns:
             Dictionary containing ranked list
         """
+        self.logger.info(f"Starting candidate ranking for {len(data.get('candidate_scores', []))} candidates")
         try:
             candidate_scores = data.get("candidate_scores", [])
             jd_data = data.get("jd_data", {})
             
             if not candidate_scores:
+                self.logger.warning("No candidates to rank")
                 return {
                     "success": True,
                     "ranked_candidates": []
                 }
             
             # Apply filters
+            self.logger.debug("Applying filters to candidates")
             filtered_candidates = self._apply_filters(candidate_scores, jd_data)
+            self.logger.info(f"After filtering: {len(filtered_candidates)} candidates remain")
             
             # Sort by total score
             sorted_candidates = sorted(
@@ -68,22 +72,29 @@ class RankingAgent(BaseAgent):
                 key=lambda x: x["scores"]["total"],
                 reverse=True
             )
+            self.logger.debug("Candidates sorted by total score")
             
             # Assign ranks and tiers
+            self.logger.debug("Assigning ranks and tiers")
             ranked_candidates = self._assign_ranks_and_tiers(sorted_candidates)
             
             # Generate explanations
+            self.logger.debug("Generating ranking explanations")
             for candidate in ranked_candidates:
                 candidate["explanation"] = self._generate_explanation(candidate)
+            
+            tier_distribution = self._calculate_tier_distribution(ranked_candidates)
+            self.logger.info(f"Ranking complete. Tier distribution: {tier_distribution}")
             
             return {
                 "success": True,
                 "ranked_candidates": ranked_candidates,
                 "total_candidates": len(ranked_candidates),
-                "tiers": self._calculate_tier_distribution(ranked_candidates)
+                "tiers": tier_distribution
             }
         
         except Exception as e:
+            self.logger.error(f"Failed to rank candidates: {str(e)}", exc_info=True)
             return await self.handle_error(e, data)
     
     def _apply_filters(

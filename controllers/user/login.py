@@ -117,14 +117,14 @@ class UserLoginController(IUserController):
         )
     ) -> JSONResponse:
         try:
-
-            self.logger.debug("Fetching request URN")
+            self.logger.debug("Fetching request URN from request state")
             self.urn = request.state.urn
             self.user_id = getattr(request.state, "user_id", None)
             self.user_urn = getattr(request.state, "user_urn", None)
             self.logger = self.logger.bind(
                 urn=self.urn, user_urn=self.user_urn, api_name=self.api_name
             )
+            self.logger.debug("Initializing utilities and repositories")
             self.dictionary_utility: DictionaryUtility = (
                 dictionary_utility(
                     urn=self.urn,
@@ -147,7 +147,7 @@ class UserLoginController(IUserController):
                 session=session,
             )
 
-            self.logger.debug("Validating request")
+            self.logger.debug("Validating request payload and headers")
             await self.validate_request(
                 urn=self.urn,
                 user_urn=self.user_urn,
@@ -156,9 +156,9 @@ class UserLoginController(IUserController):
                 api_name=self.api_name,
                 user_id=self.user_id,
             )
-            self.logger.debug("Verified request")
+            self.logger.debug("Request validated successfully")
 
-            self.logger.debug("Running login user service")
+            self.logger.info("Executing user login service")
             response_dto: BaseResponseDTO = await user_login_service_factory(
                 urn=self.urn,
                 user_urn=self.user_urn,
@@ -168,16 +168,17 @@ class UserLoginController(IUserController):
                 user_repository=self.user_repository,
             ).run(request_dto=request_payload)
 
-            self.logger.debug("Preparing response metadata")
+            self.logger.debug("Preparing successful response")
             httpStatusCode = HTTPStatus.OK
-            self.logger.debug("Prepared response metadata")
+            self.logger.info(f"User login request completed successfully")
 
         except (BadInputError, UnexpectedResponseError, NotFoundError) as err:
 
             self.logger.error(
-                f"{err.__class__} error occured while logging in user: {err}"
+                f"{err.__class__} error occurred while logging in user: {err}",
+                exc_info=True
             )
-            self.logger.debug("Preparing response metadata")
+            self.logger.debug("Preparing error response")
             response_dto: BaseResponseDTO = BaseResponseDTO(
                 transactionUrn=self.urn,
                 status=APIStatus.FAILED,
@@ -186,15 +187,16 @@ class UserLoginController(IUserController):
                 data={},
             )
             httpStatusCode = err.httpStatusCode
-            self.logger.debug("Prepared response metadata")
+            self.logger.debug("Error response prepared")
 
         except Exception as err:
 
             self.logger.error(
-                f"{err.__class__} error occured while logging in user: {err}"
+                f"{err.__class__} error occurred while logging in user: {err}",
+                exc_info=True
             )
 
-            self.logger.debug("Preparing response metadata")
+            self.logger.debug("Preparing internal server error response")
             response_dto: BaseResponseDTO = BaseResponseDTO(
                 transactionUrn=self.urn,
                 status=APIStatus.FAILED,
@@ -203,7 +205,7 @@ class UserLoginController(IUserController):
                 data={},
             )
             httpStatusCode = HTTPStatus.INTERNAL_SERVER_ERROR
-            self.logger.debug("Prepared response metadata")
+            self.logger.debug("Error response prepared")
 
         return JSONResponse(
             content=self.dictionary_utility.convert_dict_keys_to_camel_case(

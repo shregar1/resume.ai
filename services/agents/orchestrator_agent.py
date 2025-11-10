@@ -73,12 +73,13 @@ class OrchestratorAgent(BaseAgent):
             Dictionary containing complete ranking results
         """
         job_id = str(uuid.uuid4())
+        self.logger.info(f"=== Starting new ranking job {job_id} ===")
         
         try:
-            self.logger.info(f"Starting ranking job {job_id}")
+            self.logger.info(f"Job {job_id}: Received {len(data.get('cv_files', []))} CV files to process")
             
             # Phase 1: Analyze Job Description
-            self.logger.info(f"Job {job_id}: Analyzing job description")
+            self.logger.info(f"Job {job_id}: Phase 1 - Analyzing job description")
             jd_result = await self.jd_analyzer_agent.process({
                 "job_description": data.get("job_description"),
                 "job_title": data.get("job_title", ""),
@@ -86,14 +87,16 @@ class OrchestratorAgent(BaseAgent):
             })
             
             if not jd_result.get("success"):
+                self.logger.error(f"Job {job_id}: Failed to analyze job description")
                 raise Exception("Failed to analyze job description")
             
             jd_data = jd_result["jd_data"]
             jd_embeddings = jd_result.get("embeddings", {})
+            self.logger.info(f"Job {job_id}: JD analysis complete - JD ID: {jd_data.get('jd_id')}")
             
             # Phase 2: Parse CVs in parallel
-            self.logger.info(f"Job {job_id}: Parsing {len(data.get('cv_files', []))} CVs")
             cv_files = data.get("cv_files", [])
+            self.logger.info(f"Job {job_id}: Phase 2 - Parsing {len(cv_files)} CVs in parallel")
             
             parse_tasks = [
                 self._parse_cv(cv_file, job_id, i)
@@ -108,10 +111,13 @@ class OrchestratorAgent(BaseAgent):
                 if not isinstance(cv, Exception) and cv.get("success")
             ]
             
-            self.logger.info(f"Job {job_id}: Successfully parsed {len(successful_cvs)} CVs")
+            failed_count = len(parsed_cvs) - len(successful_cvs)
+            if failed_count > 0:
+                self.logger.warning(f"Job {job_id}: {failed_count} CVs failed to parse")
+            self.logger.info(f"Job {job_id}: Successfully parsed {len(successful_cvs)}/{len(cv_files)} CVs")
             
             # Phase 3: Match and Score each CV
-            self.logger.info(f"Job {job_id}: Matching and scoring candidates")
+            self.logger.info(f"Job {job_id}: Phase 3 - Matching and scoring {len(successful_cvs)} CVs")
             
             score_tasks = [
                 self._match_and_score_cv(cv["cv_data"], jd_data, jd_embeddings, job_id)

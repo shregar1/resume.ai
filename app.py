@@ -1,6 +1,6 @@
 """
 Main FastAPI application entry point. Sets up middleware, routers,
-and configuration for the FastMVC API.
+and configuration for the RESUME.AI API.
 """
 import os
 import uvicorn
@@ -64,7 +64,7 @@ async def validation_exception_handler(request, exc):
     """
     Handle validation errors and return a structured JSON response.
     """
-    logger.error(f"error: {exc.errors()}")
+    logger.error(f"Request validation error for urn={request.state.urn}: {exc.errors()}", exc_info=True)
     for error in exc.errors():
         if "ctx" in error:
             error.pop("ctx")
@@ -74,6 +74,7 @@ async def validation_exception_handler(request, exc):
         "responseKey": "error_bad_input",
         "errors": exc.errors(),
     }
+    logger.debug(f"Returning validation error response for urn={request.state.urn}")
     return JSONResponse(
         status_code=HTTPStatus.BAD_REQUEST,
         content=response_payload,
@@ -132,6 +133,9 @@ async def on_startup():
     """
     Application startup event handler.
     """
+    logger.info("=== FastAPI Application Startup ===")
+    logger.info(f"Application Name: {os.getenv('APP_NAME', 'resume.ai')}")
+    logger.info(f"Host: {HOST}, Port: {PORT}")
     logger.info("Application startup event triggered")
 
 
@@ -141,6 +145,7 @@ async def on_shutdown():
     Application shutdown event handler.
     """
     logger.info("Application shutdown event triggered")
+    logger.info("=== FastAPI Application Shutdown ===")
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host=HOST, port=PORT, reload=True)

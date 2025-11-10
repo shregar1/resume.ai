@@ -35,22 +35,36 @@ class ScoringAgent(BaseAgent):
         Returns:
             Dictionary containing calculated scores
         """
+        self.logger.info(f"Starting scoring for candidate: {data.get('cv_data', {}).get('cv_id', 'Unknown')}")
         try:
             cv_data = data.get("cv_data")
             jd_data = data.get("jd_data")
             matches = data.get("matches", {})
             
             if not cv_data or not jd_data:
+                self.logger.error("cv_data and jd_data are required but not provided")
                 raise ValueError("cv_data and jd_data are required")
             
             # Get scoring weights
             weights = jd_data.get("scoring_weights", {})
+            self.logger.debug(f"Using scoring weights: {weights}")
             
             # Calculate individual scores
+            self.logger.debug("Calculating skills score")
             skills_score = self._calculate_skills_score(matches)
+            self.logger.debug(f"Skills score: {skills_score}")
+            
+            self.logger.debug("Calculating experience score")
             experience_score = self._calculate_experience_score(matches, cv_data, jd_data)
+            self.logger.debug(f"Experience score: {experience_score}")
+            
+            self.logger.debug("Calculating education score")
             education_score = self._calculate_education_score(matches)
+            self.logger.debug(f"Education score: {education_score}")
+            
+            self.logger.debug("Calculating career trajectory score")
             career_score = self._calculate_career_trajectory_score(cv_data)
+            self.logger.debug(f"Career trajectory score: {career_score}")
             
             # Calculate total weighted score
             total_score = (
@@ -59,9 +73,11 @@ class ScoringAgent(BaseAgent):
                 weights.get("education", 0.15) * education_score +
                 weights.get("career_trajectory", 0.1) * career_score
             )
+            self.logger.info(f"Calculated total weighted score: {total_score}")
             
             # Calculate confidence
             confidence = self._calculate_confidence(matches, cv_data)
+            self.logger.debug(f"Calculated confidence: {confidence}")
             
             # Create scores object
             scores = {
@@ -74,9 +90,11 @@ class ScoringAgent(BaseAgent):
             }
             
             # Generate strengths and weaknesses
+            self.logger.debug("Identifying strengths and weaknesses")
             strengths, weaknesses = self._identify_strengths_weaknesses(
                 cv_data, jd_data, matches, scores
             )
+            self.logger.info(f"Found {len(strengths)} strengths and {len(weaknesses)} weaknesses")
             
             return {
                 "success": True,
@@ -86,6 +104,7 @@ class ScoringAgent(BaseAgent):
             }
         
         except Exception as e:
+            self.logger.error(f"Failed to calculate scores: {str(e)}", exc_info=True)
             return await self.handle_error(e, data)
     
     def _calculate_skills_score(self, matches: Dict[str, Any]) -> float:

@@ -51,18 +51,23 @@ class ParserAgent(BaseAgent):
         Returns:
             Dictionary containing parsed CV data
         """
+        self.logger.info(f"Starting CV processing for file: {data.get('file_path')}")
         try:
             file_path = data.get("file_path")
             file_type = data.get("file_type", "").lower()
             
             if not file_path:
+                self.logger.error("file_path is required but not provided")
                 raise ValueError("file_path is required")
             
+            self.logger.debug(f"Processing file type: {file_type}")
             # Extract text from file
             text = await self._extract_text(file_path, file_type)
+            self.logger.info(f"Successfully extracted {len(text)} characters from file")
             
             # Parse text using LLM
             cv_data = await self._parse_with_llm(text)
+            self.logger.info("Successfully parsed CV data with LLM")
             
             # Add metadata
             cv_data["metadata"] = {
@@ -71,12 +76,14 @@ class ParserAgent(BaseAgent):
                 "parser_version": "1.0"
             }
             
+            self.logger.info(f"CV processing completed successfully. CV ID: {cv_data.get('cv_id')}")
             return {
                 "success": True,
                 "cv_data": cv_data
             }
         
         except Exception as e:
+            self.logger.error(f"Failed to process CV: {str(e)}", exc_info=True)
             return await self.handle_error(e, data)
     
     async def _extract_text(self, file_path: str, file_type: str) -> str:
@@ -89,18 +96,23 @@ class ParserAgent(BaseAgent):
         Returns:
             Extracted text
         """
+        self.logger.debug(f"Extracting text from {file_type} file: {file_path}")
         try:
             if file_type == "pdf" or file_path.endswith(".pdf"):
+                self.logger.debug("Using PDF extraction")
                 return self._extract_from_pdf(file_path)
             elif file_type == "docx" or file_path.endswith(".docx"):
+                self.logger.debug("Using DOCX extraction")
                 return self._extract_from_docx(file_path)
             elif file_type == "txt" or file_path.endswith(".txt"):
+                self.logger.debug("Using TXT extraction")
                 return self._extract_from_txt(file_path)
             else:
+                self.logger.error(f"Unsupported file type: {file_type}")
                 raise ValueError(f"Unsupported file type: {file_type}")
         
         except Exception as e:
-            self.logger.error(f"Error extracting text: {e}")
+            self.logger.error(f"Error extracting text from {file_path}: {e}", exc_info=True)
             raise
     
     def _extract_from_pdf(self, file_path: str) -> str:
@@ -112,12 +124,16 @@ class ParserAgent(BaseAgent):
         Returns:
             Extracted text
         """
+        self.logger.debug(f"Opening PDF file: {file_path}")
         text = ""
         with pdfplumber.open(file_path) as pdf:
-            for page in pdf.pages:
+            self.logger.debug(f"PDF has {len(pdf.pages)} pages")
+            for page_num, page in enumerate(pdf.pages, 1):
                 page_text = page.extract_text()
                 if page_text:
                     text += page_text + "\n"
+                    self.logger.debug(f"Extracted {len(page_text)} chars from page {page_num}")
+        self.logger.info(f"Completed PDF extraction: {len(text)} total characters")
         return clean_text(text)
     
     def _extract_from_docx(self, file_path: str) -> str:
@@ -129,8 +145,10 @@ class ParserAgent(BaseAgent):
         Returns:
             Extracted text
         """
+        self.logger.debug(f"Opening DOCX file: {file_path}")
         doc = Document(file_path)
         text = "\n".join([para.text for para in doc.paragraphs])
+        self.logger.info(f"Extracted {len(text)} characters from DOCX")
         return clean_text(text)
     
     def _extract_from_txt(self, file_path: str) -> str:
@@ -142,8 +160,10 @@ class ParserAgent(BaseAgent):
         Returns:
             Extracted text
         """
+        self.logger.debug(f"Opening TXT file: {file_path}")
         with open(file_path, 'r', encoding='utf-8') as f:
             text = f.read()
+        self.logger.info(f"Extracted {len(text)} characters from TXT")
         return clean_text(text)
     
     async def _parse_with_llm(self, text: str) -> Dict[str, Any]:
@@ -155,6 +175,7 @@ class ParserAgent(BaseAgent):
         Returns:
             Structured CV data
         """
+        self.logger.info(f"Starting LLM parsing for text of length {len(text)}")
         system_prompt = """You are an expert CV parser. Extract structured information from the CV text.
 Return a JSON object with the following structure:
 {
@@ -216,11 +237,13 @@ Be thorough and extract all relevant information. Use null for missing dates/num
 Return ONLY valid JSON, no additional text."""
 
         try:
+            self.logger.debug("Sending request to LLM for CV parsing")
             response = await self.llm_client.generate(
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.1
             )
+            self.logger.debug(f"Received LLM response of length {len(response)}")
             
             # Parse JSON response
             # Remove markdown code blocks if present
@@ -234,6 +257,7 @@ Return ONLY valid JSON, no additional text."""
             response = response.strip()
             
             cv_dict = json.loads(response)
+            self.logger.info("Successfully parsed LLM response as JSON")
             
             # Calculate total experience
             total_months = 0
@@ -247,15 +271,18 @@ Return ONLY valid JSON, no additional text."""
             
             cv_dict["total_experience_years"] = round(total_months / 12, 1)
             cv_dict["cv_id"] = str(uuid.uuid4())
+            self.logger.info(f"Calculated total experience: {cv_dict['total_experience_years']} years")
             
             return cv_dict
         
         except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse LLM response as JSON: {e}")
+            self.logger.error(f"Failed to parse LLM response as JSON: {e}", exc_info=True)
+            self.logger.warning("Falling back to basic extraction")
             # Fallback to basic extraction
             return await self._fallback_parsing(text)
         except Exception as e:
-            self.logger.error(f"Error in LLM parsing: {e}")
+            self.logger.error(f"Error in LLM parsing: {e}", exc_info=True)
+            self.logger.warning("Falling back to basic extraction")
             return await self._fallback_parsing(text)
     
     async def _fallback_parsing(self, text: str) -> Dict[str, Any]:
@@ -267,6 +294,7 @@ Return ONLY valid JSON, no additional text."""
         Returns:
             Basic structured data
         """
+        self.logger.warning("Using fallback parsing - minimal data extraction")
         return {
             "cv_id": str(uuid.uuid4()),
             "candidate": {

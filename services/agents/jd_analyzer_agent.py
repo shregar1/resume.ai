@@ -58,19 +58,25 @@ class JDAnalyzerAgent(BaseAgent):
         Returns:
             Dictionary containing analyzed JD data
         """
+        self.logger.info(f"Starting JD analysis for job: {data.get('job_title', 'Unknown')}")
         try:
             jd_text = data.get("job_description")
             job_title = data.get("job_title", "")
             company = data.get("company", "")
             
             if not jd_text:
+                self.logger.error("job_description is required but not provided")
                 raise ValueError("job_description is required")
             
+            self.logger.debug(f"Processing JD with {len(jd_text)} characters")
             # Analyze JD using LLM
             jd_data = await self._analyze_with_llm(jd_text, job_title, company)
+            self.logger.info(f"Successfully analyzed JD. JD ID: {jd_data.get('jd_id')}")
             
             # Generate embeddings for semantic matching
+            self.logger.debug("Generating embeddings for semantic matching")
             embeddings = await self._generate_embeddings(jd_data)
+            self.logger.info("Successfully generated embeddings")
             
             return {
                 "success": True,
@@ -79,6 +85,7 @@ class JDAnalyzerAgent(BaseAgent):
             }
         
         except Exception as e:
+            self.logger.error(f"Failed to analyze JD: {str(e)}", exc_info=True)
             return await self.handle_error(e, data)
     
     async def _analyze_with_llm(
@@ -97,6 +104,7 @@ class JDAnalyzerAgent(BaseAgent):
         Returns:
             Structured job description data
         """
+        self.logger.info(f"Analyzing JD with LLM for {job_title} at {company}")
         system_prompt = """You are an expert recruiter analyzing job descriptions. Extract structured requirements.
 Return a JSON object with the following structure:
 {
@@ -140,11 +148,13 @@ Job Description:
 Return ONLY valid JSON, no additional text."""
 
         try:
+            self.logger.debug("Sending request to LLM for JD analysis")
             response = await self.llm_client.generate(
                 prompt=user_prompt,
                 system_prompt=system_prompt,
                 temperature=0.1
             )
+            self.logger.debug(f"Received LLM response of length {len(response)}")
             
             # Clean and parse JSON
             response = response.strip()
@@ -159,11 +169,13 @@ Return ONLY valid JSON, no additional text."""
             jd_dict = json.loads(response)
             jd_dict["jd_id"] = str(uuid.uuid4())
             jd_dict["full_description"] = jd_text
+            self.logger.info(f"Successfully parsed JD data. Found {len(jd_dict.get('requirements', {}).get('must_have_skills', []))} must-have skills")
             
             return jd_dict
         
         except Exception as e:
-            self.logger.error(f"Error analyzing JD with LLM: {e}")
+            self.logger.error(f"Error analyzing JD with LLM: {e}", exc_info=True)
+            self.logger.warning("Using fallback JD structure")
             # Fallback
             return {
                 "jd_id": str(uuid.uuid4()),
@@ -202,6 +214,7 @@ Return ONLY valid JSON, no additional text."""
         Returns:
             Dictionary of embeddings
         """
+        self.logger.debug("Generating embeddings for JD components")
         try:
 
             texts_to_embed = [
@@ -210,7 +223,9 @@ Return ONLY valid JSON, no additional text."""
                 " ".join(jd_data.get("responsibilities", []))
             ]
             
+            self.logger.debug(f"Generating embeddings for {len(texts_to_embed)} text components")
             embeddings_list = await self.llm_client.generate_embeddings(texts_to_embed)
+            self.logger.info("Successfully generated all embeddings")
             
             return {
                 "full_description": embeddings_list[0],
@@ -219,7 +234,7 @@ Return ONLY valid JSON, no additional text."""
             }
         
         except Exception as e:
-            self.logger.error(f"Error generating embeddings: {e}")
+            self.logger.error(f"Error generating embeddings: {e}", exc_info=True)
             return {
                 "full_description": [],
                 "skills": [],

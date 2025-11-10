@@ -68,8 +68,10 @@ class IController(ABC):
         api_name: str,
         user_id: str,
     ):
+        self._logger.debug(f"Validating request for urn={urn}, api_name={api_name}")
         self.urn = urn
         self.user_urn = user_urn
         self.api_name = api_name
         self.user_id = user_id
+        self._logger.debug("Request validation completed successfully")
         return

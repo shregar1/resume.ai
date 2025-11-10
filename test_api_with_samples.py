@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import List, Dict
 
 # Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "http://localhost:8004"
 RESUMES_DIR = Path("data/resumes")
 JOB_DESCRIPTION_FILE = Path("data/sample_job_description.txt")
 NUM_RESUMES = 20

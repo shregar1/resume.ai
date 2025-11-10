@@ -15,18 +15,7 @@ from http import HTTPStatus
 from loguru import logger
 
 from constants.default import Default
-from controllers.user import router as UserRouter
 from controllers.apis import router as APISRouter
-
-from middlewares.authetication import AuthenticationMiddleware
-from middlewares.rate_limit import (
-    RateLimitMiddleware, RateLimitConfig
-)
-from middlewares.security_headers import (
-    SecurityHeadersMiddleware,
-    SecurityHeadersConfig
-)
-from middlewares.request_context import RequestContextMiddleware
 
 app = FastAPI()
 
@@ -89,7 +78,7 @@ async def health_check():
     logger.info("Health check endpoint called")
     return {"status": "ok"}
 
-
+logger.info("Initialising middleware stack")
 app.add_middleware(middleware_class=TrustedHostMiddleware, allowed_hosts=["*"])
 origins = ["*"]
 app.add_middleware(
@@ -99,30 +88,9 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-logger.info("Initialising middleware stack")
-security_config = SecurityHeadersConfig(
-    enable_hsts=True,
-    enable_csp=True,
-    hsts_max_age=31536000,
-    hsts_include_subdomains=True
-)
-app.add_middleware(SecurityHeadersMiddleware, **security_config.__dict__)
-rate_limit_config = RateLimitConfig(
-    requests_per_minute=RATE_LIMIT_REQUESTS_PER_MINUTE,
-    requests_per_hour=RATE_LIMIT_REQUESTS_PER_HOUR,
-    burst_limit=RATE_LIMIT_BURST_LIMIT,
-    enable_sliding_window=True,
-    enable_token_bucket=False
-)
-app.add_middleware(RateLimitMiddleware, config=rate_limit_config)
-app.add_middleware(AuthenticationMiddleware)
-app.add_middleware(RequestContextMiddleware)
 logger.info("Initialised middleware stack")
 
 logger.info("Initialising routers")
-# USER ROUTER
-app.include_router(UserRouter)
 # APIS ROUTER
 app.include_router(APISRouter)
 logger.info("Initialised routers")

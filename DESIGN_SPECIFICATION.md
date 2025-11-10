@@ -5,7 +5,6 @@
 This document outlines the architecture for an intelligent multi-agent system designed to automatically rank 50+ CVs based on job descriptions. The system employs specialized AI agents working collaboratively to parse, analyze, match, and rank candidates efficiently and accurately.
 
 ---
-## 1. Agent Roles and Responsibilities
 
 ### Orchestrator Agent
 

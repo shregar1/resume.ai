@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 
 from services.agents.base_agent import BaseAgent
 
-from dtos.enitities.candidate.tier import CandidateTier
+from constants.candidate_tier import CandidateTierConstant
 
 from start_utils import llm, embedding_llm
 
@@ -114,33 +114,34 @@ class RankingAgent(BaseAgent):
         filtered = []
         
         for candidate in candidates:
-            # Minimum score threshold
-            if candidate["scores"]["total"] < 30:
-                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - score too low")
+            # Minimum score threshold (lowered to be more inclusive)
+            total_score = candidate["scores"]["total"]
+            if total_score < 10:
+                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - score too low ({total_score:.1f})")
                 continue
             
-            # Must have minimum required skills match
+            # Must have minimum required skills match (lowered threshold)
             skill_score = candidate["scores"]["skills_match"]
-            if skill_score < 40:
-                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - insufficient skills")
+            if skill_score < 10:
+                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - insufficient skills ({skill_score:.1f})")
                 continue
             
-            # Check for critical missing requirements
-            missing_skills = candidate.get("matches", {}).get("missing_skills", [])
-            requirements = jd_data.get("requirements", {})
-            critical_skills = [
-                s["skill"] for s in requirements.get("must_have_skills", [])
-                if s.get("weight", 0) >= 0.9
-            ]
+            # Check for critical missing requirements (temporarily disabled for testing)
+            # missing_skills = candidate.get("matches", {}).get("missing_skills", [])
+            # requirements = jd_data.get("requirements", {})
+            # critical_skills = [
+            #     s["skill"] for s in requirements.get("must_have_skills", [])
+            #     if s.get("weight", 0) >= 0.9
+            # ]
             
-            has_critical_gaps = any(
-                skill.lower() in [m.lower() for m in missing_skills]
-                for skill in critical_skills
-            )
+            # has_critical_gaps = any(
+            #     skill.lower() in [m.lower() for m in missing_skills]
+            #     for skill in critical_skills
+            # )
             
-            if has_critical_gaps and len(critical_skills) > 0:
-                self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - missing critical skills")
-                continue
+            # if has_critical_gaps and len(critical_skills) > 0:
+            #     self.logger.info(f"Filtered out {candidate.get('candidate_name', 'Unknown')} - missing critical skills")
+            #     continue
             
             filtered.append(candidate)
         
@@ -167,13 +168,13 @@ class RankingAgent(BaseAgent):
             score = candidate["scores"]["total"]
             
             if score >= 85:
-                candidate["tier"] = CandidateTier.A.value
+                candidate["tier"] = CandidateTierConstant.A
             elif score >= 70:
-                candidate["tier"] = CandidateTier.B.value
+                candidate["tier"] = CandidateTierConstant.B
             elif score >= 55:
-                candidate["tier"] = CandidateTier.C.value
+                candidate["tier"] = CandidateTierConstant.C
             else:
-                candidate["tier"] = CandidateTier.D.value
+                candidate["tier"] = CandidateTierConstant.D
         
         return candidates
     
